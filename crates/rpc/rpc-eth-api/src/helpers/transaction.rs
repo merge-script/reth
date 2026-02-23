@@ -97,15 +97,22 @@ pub trait EthTransactions: LoadTransaction<Provider: BlockReaderIdExt> {
     /// Decodes and recovers the transaction and submits it to the pool.
     ///
     /// And awaits the receipt.
+    ///
+    /// If `timeout_ms` is provided, the effective timeout is `min(timeout_ms, server_max)`.
     fn send_raw_transaction_sync(
         &self,
         tx: Bytes,
+        timeout_ms: Option<u64>,
     ) -> impl Future<Output = Result<RpcReceipt<Self::NetworkTypes>, Self::Error>> + Send
     where
         Self: LoadReceipt + 'static,
     {
         let this = self.clone();
-        let timeout_duration = self.send_raw_transaction_sync_timeout();
+        let server_max = self.send_raw_transaction_sync_timeout();
+        let timeout_duration = match timeout_ms {
+            Some(ms) => server_max.min(Duration::from_millis(ms)),
+            None => server_max,
+        };
         async move {
             let mut stream = this.provider().canonical_state_stream();
             let hash = EthTransactions::send_raw_transaction(&this, tx).await?;
