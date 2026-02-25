@@ -14,7 +14,7 @@ use alloy_consensus::{
 use alloy_dyn_abi::TypedData;
 use alloy_eips::{eip2718::Encodable2718, BlockId};
 use alloy_network::{TransactionBuilder, TransactionBuilder4844};
-use alloy_primitives::{Address, Bytes, TxHash, B256, U256};
+use alloy_primitives::{Address, Bytes, TxHash, B256, U256, U64};
 use alloy_rpc_types_eth::{BlockNumberOrTag, TransactionInfo};
 use futures::{Future, StreamExt};
 use reth_chain_state::CanonStateSubscriptions;
@@ -102,7 +102,7 @@ pub trait EthTransactions: LoadTransaction<Provider: BlockReaderIdExt> {
     fn send_raw_transaction_sync(
         &self,
         tx: Bytes,
-        timeout_ms: Option<u64>,
+        timeout_ms: Option<U64>,
     ) -> impl Future<Output = Result<RpcReceipt<Self::NetworkTypes>, Self::Error>> + Send
     where
         Self: LoadReceipt + 'static,
@@ -110,7 +110,7 @@ pub trait EthTransactions: LoadTransaction<Provider: BlockReaderIdExt> {
         let this = self.clone();
         let server_max = self.send_raw_transaction_sync_timeout();
         let timeout_duration = match timeout_ms {
-            Some(ms) => server_max.min(Duration::from_millis(ms)),
+            Some(ms) => server_max.min(Duration::from_millis(ms.to::<u64>())),
             None => server_max,
         };
         async move {
